@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>English Tutor</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    #avatar { width: 250px; margin-bottom: 20px; }
+    #transcript { margin-top: 20px; font-size: 18px; color: #333; }
+    #speakBtn { font-size: 20px; padding: 10px 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>English Tutor</h1>
+  <img id="avatar" src="avatar.png" alt="Avatar">
+  <button id="speakBtn">🎤 Speak</button>
+  <div id="transcript"></div>
+
+  <script>
+    // Service Worker opzionale per PWA offline
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker registered"))
+        .catch(console.error);
+    }
+
+    const speakBtn = document.getElementById("speakBtn");
+    const transcriptDiv = document.getElementById("transcript");
+
+    speakBtn.addEventListener("click", async () => {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech Recognition non supportato!");
+        return;
+      }
+
+      const recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.start();
+
+      recognition.onresult = async function(event) {
+        const text = event.results[0][0].transcript;
+        transcriptDiv.innerText = text; // Mostra trascrizione live
+
+        try {
+          // Sostituisci con l'URL del backend online su Render/Netlify
+          const response = await fetch("https://TUO_BACKEND_URL/talk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text })
+          });
+
+          const data = await response.json();
+
+          // Aggiorna avatar
+          const avatar = document.getElementById("avatar");
+          avatar.src = data.video || "avatar.png";
+
+          // Voce sintetica
+          if ("speechSynthesis" in window) {
+            const utterance = new SpeechSynthesisUtterance(data.text);
+            utterance.lang = "en-US";
+            speechSynthesis.speak(utterance);
+          }
+
+        } catch (err) {
+          console.error(err);
+          alert("Errore nel comunicare con il server.");
+        }
+      };
+
+      recognition.onerror = function(err) {
+        console.error("Speech recognition error:", err);
+        alert("Errore riconoscimento vocale.");
+      };
+    });
+  </script>
+</body>
+</html>
